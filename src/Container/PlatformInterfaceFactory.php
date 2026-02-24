@@ -26,6 +26,12 @@ final class PlatformInterfaceFactory
                 '$options["driver"] must be an instance of ' . MysqliDriver::class . ' or ' . PdoDriver::class . '.'
             );
         }
-        return new AdapterPlatform($driverInstance);
+        $strategy      = null;
+        $strategyClass = $options['sql_strategy'] ?? null;
+        if ($strategyClass !== null) {
+            $strategy = new $strategyClass();
+        }
+
+        return new AdapterPlatform($driverInstance, $strategy);
     }
 }

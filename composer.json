@@ -15,6 +15,12 @@
         "source": "https://github.com/php-db/phpdb-mysql",
         "forum": "https://github.com/php-db/phpdb-mysql/discussions"
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/simon-mundy/phpdb"
+        }
+    ],
     "minimum-stability": "dev",
     "prefer-stable": true,
     "config": {
@@ -33,7 +39,7 @@
     },
     "require": {
         "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
-        "php-db/phpdb": "^0.6.0"
+        "php-db/phpdb": "dev-platform-strategy-refactor"
     },
     "require-dev": {
         "ext-mysqli": "*",

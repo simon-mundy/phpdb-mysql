@@ -8,19 +8,19 @@ use Override;
 use PhpDb\Adapter\Driver\DriverInterface;
 use PhpDb\Adapter\ParameterContainer;
 use PhpDb\Adapter\Platform\PlatformInterface;
-use PhpDb\Sql\Platform\PlatformDecoratorInterface;
 use PhpDb\Sql\PreparableSqlInterface;
 use PhpDb\Sql\Select;
 use PhpDb\Sql\SqlInterface;
+use PhpDb\Sql\Strategy\TypeDecoratorInterface;
 
-final class SelectDecorator extends Select implements PlatformDecoratorInterface
+final class SelectDecorator extends Select implements TypeDecoratorInterface
 {
     protected SqlInterface|PreparableSqlInterface|null $subject;
 
     #[Override]
     public function setSubject(
         SqlInterface|PreparableSqlInterface|null $subject
-    ): PlatformDecoratorInterface {
+    ): TypeDecoratorInterface {
         $this->subject = $subject;
         return $this;
     }

@@ -6,9 +6,9 @@ namespace PhpDb\Mysql\Sql\Ddl;
 
 use PhpDb\Adapter\Platform\PlatformInterface;
 use PhpDb\Sql\Ddl\CreateTable;
-use PhpDb\Sql\Platform\PlatformDecoratorInterface;
 use PhpDb\Sql\PreparableSqlInterface;
 use PhpDb\Sql\SqlInterface;
+use PhpDb\Sql\Strategy\TypeDecoratorInterface;
 
 use function count;
 use function range;
@@ -20,7 +20,7 @@ use function strtoupper;
 use function substr_replace;
 use function uksort;
 
-final class CreateTableDecorator extends CreateTable implements PlatformDecoratorInterface
+final class CreateTableDecorator extends CreateTable implements TypeDecoratorInterface
 {
     protected SqlInterface|PreparableSqlInterface|null $subject;
 
@@ -39,7 +39,7 @@ final class CreateTableDecorator extends CreateTable implements PlatformDecorato
 
     public function setSubject(
         PreparableSqlInterface|SqlInterface|null $subject
-    ): PlatformDecoratorInterface {
+    ): TypeDecoratorInterface {
         $this->subject = $subject;
 
         return $this;

@@ -9,15 +9,13 @@ use Override;
 use PDO;
 use PhpDb\Adapter\Driver\DriverInterface;
 use PhpDb\Adapter\Platform\AbstractPlatform;
-use PhpDb\Sql\Platform\PlatformDecoratorInterface;
+use PhpDb\Sql\Strategy\SqlStrategyInterface;
 
 use function implode;
 use function str_replace;
 
 class AdapterPlatform extends AbstractPlatform
 {
-    public final const PLATFORM_NAME = 'MySQL';
-
     /**
      * {@inheritDoc}
      */
@@ -34,26 +32,16 @@ class AdapterPlatform extends AbstractPlatform
     protected string $quoteIdentifierFragmentPattern = '/([^0-9,a-z,A-Z$_\-:])/i';
 
     public function __construct(
-        protected readonly DriverInterface|mysqli|PDO $driver
+        protected readonly DriverInterface|mysqli|PDO $driver,
+        ?SqlStrategyInterface $sqlStrategy = null,
     ) {
+        $this->sqlStrategy = $sqlStrategy;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     #[Override]
-    public function getName(): string
+    protected function createDefaultSqlStrategy(): SqlStrategyInterface
     {
-        return self::PLATFORM_NAME;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    #[Override]
-    public function getSqlPlatformDecorator(): PlatformDecoratorInterface
-    {
-        return new Sql\Platform();
+        return new Sql\MysqlStrategy();
     }
 
     /**

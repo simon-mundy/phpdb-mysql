@@ -6,9 +6,9 @@ namespace PhpDb\Mysql\Sql\Ddl;
 
 use PhpDb\Adapter\Platform\PlatformInterface;
 use PhpDb\Sql\Ddl\AlterTable;
-use PhpDb\Sql\Platform\PlatformDecoratorInterface;
 use PhpDb\Sql\PreparableSqlInterface;
 use PhpDb\Sql\SqlInterface;
+use PhpDb\Sql\Strategy\TypeDecoratorInterface;
 
 use function count;
 use function range;
@@ -20,7 +20,7 @@ use function strtoupper;
 use function substr_replace;
 use function uksort;
 
-final class AlterTableDecorator extends AlterTable implements PlatformDecoratorInterface
+final class AlterTableDecorator extends AlterTable implements TypeDecoratorInterface
 {
     protected SqlInterface|PreparableSqlInterface|null $subject;
 
@@ -52,7 +52,7 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
 
     public function setSubject(
         SqlInterface|PreparableSqlInterface|null $subject
-    ): PlatformDecoratorInterface {
+    ): TypeDecoratorInterface {
         $this->subject = $subject;
 
         return $this;
