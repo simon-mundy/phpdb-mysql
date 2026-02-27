@@ -49,6 +49,8 @@ trait MysqlTableOptionsTrait
             'keyblocksize' => 'KEY_BLOCK_SIZE = ' . $value,
             'compression' => 'COMPRESSION = ' . $platform->quoteTrustedValue(strtoupper((string) $value)),
             'encryption' => 'ENCRYPTION = ' . $platform->quoteTrustedValue(strtoupper((string) $value)),
+            'algorithm' => 'ALGORITHM = ' . strtoupper((string) $value),
+            'lock' => 'LOCK = ' . strtoupper((string) $value),
             default => $this->formatDefaultTableOption($key, $value, $platform),
         };
     }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PhpDb\Mysql\Sql\Ddl;
 
 use PhpDb\Adapter\Platform\PlatformInterface;
-use PhpDb\Sql\Ddl\AlterTable;
+use PhpDb\Sql\Ddl\Column\ColumnInterface;
 use PhpDb\Sql\Platform\PlatformDecoratorInterface;
 use PhpDb\Sql\PreparableSqlInterface;
 use PhpDb\Sql\SqlInterface;
@@ -20,28 +20,13 @@ use function strtoupper;
 use function substr_replace;
 use function uksort;
 
-final class AlterTableDecorator extends AlterTable implements PlatformDecoratorInterface
+final class AlterTableDecorator extends MysqlAlterTable implements PlatformDecoratorInterface
 {
     use MysqlTableOptionsTrait;
 
     protected SqlInterface|PreparableSqlInterface|null $subject;
 
-    /** @var array{
-     *  unsigned: int,
-     *  zerofill: int,
-     *  identity: int,
-     *  serial: int,
-     *  autoincrement: int,
-     *  comment: int,
-     *  columnformat: int,
-     *  format: int,
-     *  storage: int,
-     *  charset: int,
-     *  collation: int,
-     *  first: int,
-     *  after: int
-     * } $columnOptionSortOrder
-     */
+    /** @var array<string, int> */
     protected array $columnOptionSortOrder = [
         'unsigned'      => 0,
         'zerofill'      => 1,
@@ -54,8 +39,10 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
         'storage'       => 5,
         'charset'       => 6,
         'collation'     => 7,
-        'first'         => 8,
-        'after'         => 9,
+        'invisible'     => 8,
+        'visible'       => 8,
+        'first'         => 9,
+        'after'         => 10,
     ];
 
     public function setSubject(
@@ -101,77 +88,10 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
         $sqls = [];
 
         foreach ($this->addColumns as $i => $column) {
-            $sql           = $this->processExpression($column, $adapterPlatform);
-            $insertStart   = $this->getSqlInsertOffsets($sql);
-            $columnOptions = $column->getOptions();
-
-            uksort($columnOptions, [$this, 'compareColumnOptions']);
-
-            foreach ($columnOptions as $coName => $coValue) {
-                $insert = '';
-
-                if (! $coValue) {
-                    continue;
-                }
-
-                switch ($this->normalizeColumnOption($coName)) {
-                    case 'unsigned':
-                        $insert = ' UNSIGNED';
-                        $j      = 0;
-                        break;
-                    case 'zerofill':
-                        $insert = ' ZEROFILL';
-                        $j      = 0;
-                        break;
-                    case 'identity':
-                    case 'serial':
-                    case 'autoincrement':
-                        $insert = ' AUTO_INCREMENT';
-                        $j      = 1;
-                        break;
-                    case 'comment':
-                        $insert = ' COMMENT ' . $adapterPlatform->quoteValue($coValue);
-                        $j      = 2;
-                        break;
-                    case 'columnformat':
-                    case 'format':
-                        $insert = ' COLUMN_FORMAT ' . strtoupper($coValue);
-                        $j      = 2;
-                        break;
-                    case 'storage':
-                        $insert = ' STORAGE ' . strtoupper($coValue);
-                        $j      = 2;
-                        break;
-                    case 'charset':
-                    case 'characterset':
-                        $insert = ' CHARACTER SET ' . $coValue;
-                        $j      = 0;
-                        break;
-                    case 'collation':
-                    case 'collate':
-                        $insert = ' COLLATE ' . $coValue;
-                        $j      = 0;
-                        break;
-                    case 'first':
-                        $insert = ' FIRST';
-                        $j      = 2;
-                        break;
-                    case 'after':
-                        $insert = ' AFTER ' . $adapterPlatform->quoteIdentifier($coValue);
-                        $j      = 2;
-                }
-
-                if ($insert) {
-                    $j                = $j ?? 0;
-                    $sql              = substr_replace($sql, $insert, $insertStart[$j], 0);
-                    $insertStartCount = count($insertStart);
-                    for (; $j < $insertStartCount; ++$j) {
-                        $insertStart[$j] += strlen($insert);
-                    }
-                }
-            }
-            $sqls[$i] = $sql;
+            $sql      = $this->processExpression($column, $adapterPlatform);
+            $sqls[$i] = $this->injectMysqlColumnOptions($sql, $column, $adapterPlatform);
         }
+
         return [$sqls];
     }
 
@@ -179,79 +99,28 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
     {
         $sqls = [];
         foreach ($this->changeColumns as $name => $column) {
-            $sql           = $this->processExpression($column, $adapterPlatform);
-            $insertStart   = $this->getSqlInsertOffsets($sql);
-            $columnOptions = $column->getOptions();
-
-            uksort($columnOptions, [$this, 'compareColumnOptions']);
-
-            foreach ($columnOptions as $coName => $coValue) {
-                $insert = '';
-
-                if (! $coValue) {
-                    continue;
-                }
-
-                switch ($this->normalizeColumnOption($coName)) {
-                    case 'unsigned':
-                        $insert = ' UNSIGNED';
-                        $j      = 0;
-                        break;
-                    case 'zerofill':
-                        $insert = ' ZEROFILL';
-                        $j      = 0;
-                        break;
-                    case 'identity':
-                    case 'serial':
-                    case 'autoincrement':
-                        $insert = ' AUTO_INCREMENT';
-                        $j      = 1;
-                        break;
-                    case 'comment':
-                        $insert = ' COMMENT ' . $adapterPlatform->quoteValue($coValue);
-                        $j      = 2;
-                        break;
-                    case 'columnformat':
-                    case 'format':
-                        $insert = ' COLUMN_FORMAT ' . strtoupper($coValue);
-                        $j      = 2;
-                        break;
-                    case 'storage':
-                        $insert = ' STORAGE ' . strtoupper($coValue);
-                        $j      = 2;
-                        break;
-                    case 'charset':
-                    case 'characterset':
-                        $insert = ' CHARACTER SET ' . $coValue;
-                        $j      = 0;
-                        break;
-                    case 'collation':
-                    case 'collate':
-                        $insert = ' COLLATE ' . $coValue;
-                        $j      = 0;
-                        break;
-                    case 'first':
-                        $insert = ' FIRST';
-                        $j      = 2;
-                        break;
-                    case 'after':
-                        $insert = ' AFTER ' . $adapterPlatform->quoteIdentifier($coValue);
-                        $j      = 2;
-                }
-
-                if ($insert) {
-                    $j                = $j ?? 0;
-                    $sql              = substr_replace($sql, $insert, $insertStart[$j], 0);
-                    $insertStartCount = count($insertStart);
-                    for (; $j < $insertStartCount; ++$j) {
-                        $insertStart[$j] += strlen($insert);
-                    }
-                }
-            }
+            $sql    = $this->processExpression($column, $adapterPlatform);
+            $sql    = $this->injectMysqlColumnOptions($sql, $column, $adapterPlatform);
             $sqls[] = [
                 $adapterPlatform->quoteIdentifier($name),
                 $sql,
             ];
+        }
+
+        return [$sqls];
+    }
+
+    /** @return string[][]|null */
+    protected function processModifyColumns(?PlatformInterface $adapterPlatform = null): ?array
+    {
+        if (! $this->modifyColumns) {
+            return null;
+        }
+
+        $sqls = [];
+        foreach ($this->modifyColumns as $column) {
+            $sql    = $this->processExpression($column, $adapterPlatform);
+            $sqls[] = $this->injectMysqlColumnOptions($sql, $column, $adapterPlatform);
         }
 
         return [$sqls];
@@ -267,6 +136,91 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
         }
 
         return [$this->buildMysqlTableOptions($adapterPlatform)];
+    }
+
+    private function injectMysqlColumnOptions(
+        string $sql,
+        ColumnInterface $column,
+        PlatformInterface $platform
+    ): string {
+        $insertStart   = $this->getSqlInsertOffsets($sql);
+        $columnOptions = $column->getOptions();
+
+        uksort($columnOptions, [$this, 'compareColumnOptions']);
+
+        foreach ($columnOptions as $coName => $coValue) {
+            $insert = '';
+
+            if (! $coValue) {
+                continue;
+            }
+
+            switch ($this->normalizeColumnOption($coName)) {
+                case 'unsigned':
+                    $insert = ' UNSIGNED';
+                    $j      = 0;
+                    break;
+                case 'zerofill':
+                    $insert = ' ZEROFILL';
+                    $j      = 0;
+                    break;
+                case 'identity':
+                case 'serial':
+                case 'autoincrement':
+                    $insert = ' AUTO_INCREMENT';
+                    $j      = 1;
+                    break;
+                case 'comment':
+                    $insert = ' COMMENT ' . $platform->quoteValue($coValue);
+                    $j      = 2;
+                    break;
+                case 'columnformat':
+                case 'format':
+                    $insert = ' COLUMN_FORMAT ' . strtoupper($coValue);
+                    $j      = 2;
+                    break;
+                case 'storage':
+                    $insert = ' STORAGE ' . strtoupper($coValue);
+                    $j      = 2;
+                    break;
+                case 'charset':
+                case 'characterset':
+                    $insert = ' CHARACTER SET ' . $coValue;
+                    $j      = 0;
+                    break;
+                case 'collation':
+                case 'collate':
+                    $insert = ' COLLATE ' . $coValue;
+                    $j      = 0;
+                    break;
+                case 'invisible':
+                    $insert = ' INVISIBLE';
+                    $j      = 2;
+                    break;
+                case 'visible':
+                    $insert = ' VISIBLE';
+                    $j      = 2;
+                    break;
+                case 'first':
+                    $insert = ' FIRST';
+                    $j      = 2;
+                    break;
+                case 'after':
+                    $insert = ' AFTER ' . $platform->quoteIdentifier($coValue);
+                    $j      = 2;
+            }
+
+            if ($insert) {
+                $j                = $j ?? 0;
+                $sql              = substr_replace($sql, $insert, $insertStart[$j], 0);
+                $insertStartCount = count($insertStart);
+                for (; $j < $insertStartCount; ++$j) {
+                    $insertStart[$j] += strlen($insert);
+                }
+            }
+        }
+
+        return $sql;
     }
 
     /**

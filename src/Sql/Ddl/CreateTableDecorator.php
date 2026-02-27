@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PhpDb\Mysql\Sql\Ddl;
 
 use PhpDb\Adapter\Platform\PlatformInterface;
-use PhpDb\Sql\Ddl\CreateTable;
+use PhpDb\Sql\Ddl\Column\ColumnInterface;
 use PhpDb\Sql\Platform\PlatformDecoratorInterface;
 use PhpDb\Sql\PreparableSqlInterface;
 use PhpDb\Sql\SqlInterface;
@@ -21,7 +21,7 @@ use function strtoupper;
 use function substr_replace;
 use function uksort;
 
-final class CreateTableDecorator extends CreateTable implements PlatformDecoratorInterface
+final class CreateTableDecorator extends MysqlCreateTable implements PlatformDecoratorInterface
 {
     use MysqlTableOptionsTrait;
 
@@ -40,6 +40,8 @@ final class CreateTableDecorator extends CreateTable implements PlatformDecorato
         'storage'       => 5,
         'charset'       => 6,
         'collation'     => 7,
+        'invisible'     => 8,
+        'visible'       => 8,
     ];
 
     public function setSubject(
@@ -96,70 +98,8 @@ final class CreateTableDecorator extends CreateTable implements PlatformDecorato
         $sqls = [];
 
         foreach ($this->columns as $i => $column) {
-            $sql           = $this->processExpression($column, $platform);
-            $insertStart   = $this->getSqlInsertOffsets($sql);
-            $columnOptions = $column->getOptions();
-
-            uksort($columnOptions, [$this, 'compareColumnOptions']);
-
-            foreach ($columnOptions as $coName => $coValue) {
-                $insert = '';
-
-                if (! $coValue) {
-                    continue;
-                }
-
-                switch ($this->normalizeColumnOption($coName)) {
-                    case 'unsigned':
-                        $insert = ' UNSIGNED';
-                        $j      = 0;
-                        break;
-                    case 'zerofill':
-                        $insert = ' ZEROFILL';
-                        $j      = 0;
-                        break;
-                    case 'identity':
-                    case 'serial':
-                    case 'autoincrement':
-                        $insert = ' AUTO_INCREMENT';
-                        $j      = 1;
-                        break;
-                    case 'comment':
-                        $insert = ' COMMENT ' . $platform->quoteValue($coValue);
-                        $j      = 2;
-                        break;
-                    case 'columnformat':
-                    case 'format':
-                        $insert = ' COLUMN_FORMAT ' . strtoupper($coValue);
-                        $j      = 2;
-                        break;
-                    case 'storage':
-                        $insert = ' STORAGE ' . strtoupper($coValue);
-                        $j      = 2;
-                        break;
-                    case 'charset':
-                    case 'characterset':
-                        $insert = ' CHARACTER SET ' . $coValue;
-                        $j      = 0;
-                        break;
-                    case 'collation':
-                    case 'collate':
-                        $insert = ' COLLATE ' . $coValue;
-                        $j      = 0;
-                        break;
-                }
-
-                if ($insert) {
-                    $j                = $j ?? 0;
-                    $sql              = substr_replace($sql, $insert, $insertStart[$j], 0);
-                    $insertStartCount = count($insertStart);
-                    for (; $j < $insertStartCount; ++$j) {
-                        $insertStart[$j] += strlen($insert);
-                    }
-                }
-            }
-
-            $sqls[$i] = $sql;
+            $sql      = $this->processExpression($column, $platform);
+            $sqls[$i] = $this->injectMysqlColumnOptions($sql, $column, $platform);
         }
 
         return [$sqls];
@@ -175,6 +115,84 @@ final class CreateTableDecorator extends CreateTable implements PlatformDecorato
         }
 
         return [implode(' ', $this->buildMysqlTableOptions($adapterPlatform))];
+    }
+
+    private function injectMysqlColumnOptions(
+        string $sql,
+        ColumnInterface $column,
+        PlatformInterface $platform
+    ): string {
+        $insertStart   = $this->getSqlInsertOffsets($sql);
+        $columnOptions = $column->getOptions();
+
+        uksort($columnOptions, [$this, 'compareColumnOptions']);
+
+        foreach ($columnOptions as $coName => $coValue) {
+            $insert = '';
+
+            if (! $coValue) {
+                continue;
+            }
+
+            switch ($this->normalizeColumnOption($coName)) {
+                case 'unsigned':
+                    $insert = ' UNSIGNED';
+                    $j      = 0;
+                    break;
+                case 'zerofill':
+                    $insert = ' ZEROFILL';
+                    $j      = 0;
+                    break;
+                case 'identity':
+                case 'serial':
+                case 'autoincrement':
+                    $insert = ' AUTO_INCREMENT';
+                    $j      = 1;
+                    break;
+                case 'comment':
+                    $insert = ' COMMENT ' . $platform->quoteValue($coValue);
+                    $j      = 2;
+                    break;
+                case 'columnformat':
+                case 'format':
+                    $insert = ' COLUMN_FORMAT ' . strtoupper($coValue);
+                    $j      = 2;
+                    break;
+                case 'storage':
+                    $insert = ' STORAGE ' . strtoupper($coValue);
+                    $j      = 2;
+                    break;
+                case 'charset':
+                case 'characterset':
+                    $insert = ' CHARACTER SET ' . $coValue;
+                    $j      = 0;
+                    break;
+                case 'collation':
+                case 'collate':
+                    $insert = ' COLLATE ' . $coValue;
+                    $j      = 0;
+                    break;
+                case 'invisible':
+                    $insert = ' INVISIBLE';
+                    $j      = 2;
+                    break;
+                case 'visible':
+                    $insert = ' VISIBLE';
+                    $j      = 2;
+                    break;
+            }
+
+            if ($insert) {
+                $j                = $j ?? 0;
+                $sql              = substr_replace($sql, $insert, $insertStart[$j], 0);
+                $insertStartCount = count($insertStart);
+                for (; $j < $insertStartCount; ++$j) {
+                    $insertStart[$j] += strlen($insert);
+                }
+            }
+        }
+
+        return $sql;
     }
 
     /**

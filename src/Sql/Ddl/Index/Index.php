@@ -6,29 +6,14 @@ namespace PhpDb\Mysql\Sql\Ddl\Index;
 
 use Override;
 use PhpDb\Sql\Argument\Literal;
-use PhpDb\Sql\Ddl\Index\Index;
+use PhpDb\Sql\Ddl\Index\Index as BaseIndex;
 
 use function implode;
 use function str_replace;
 
-class FulltextIndex extends Index
+class Index extends BaseIndex
 {
     use IndexOptionsTrait;
-
-    protected string $specification = 'FULLTEXT INDEX %s(...)';
-
-    protected ?string $parser = null;
-
-    public function setParser(string $parser): static
-    {
-        $this->parser = $parser;
-        return $this;
-    }
-
-    public function getParser(): ?string
-    {
-        return $this->parser;
-    }
 
     /** @inheritDoc */
     #[Override]
@@ -38,9 +23,9 @@ class FulltextIndex extends Index
 
         $spec = str_replace('...', implode(', ', $specParts), $this->specification);
 
-        if ($this->parser !== null) {
-            $spec    .= ' WITH PARSER %s';
-            $values[] = new Literal($this->parser);
+        if ($this->type !== null) {
+            $spec    .= ' USING %s';
+            $values[] = new Literal($this->type);
         }
 
         $this->appendMysqlIndexOptions($spec, $values);
