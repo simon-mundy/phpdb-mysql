@@ -38,6 +38,7 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
      *  storage: int,
      *  charset: int,
      *  collation: int,
+     *  first: int,
      *  after: int
      * } $columnOptionSortOrder
      */
@@ -53,7 +54,8 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
         'storage'       => 5,
         'charset'       => 6,
         'collation'     => 7,
-        'after'         => 8,
+        'first'         => 8,
+        'after'         => 9,
     ];
 
     public function setSubject(
@@ -150,6 +152,10 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
                         $insert = ' COLLATE ' . $coValue;
                         $j      = 0;
                         break;
+                    case 'first':
+                        $insert = ' FIRST';
+                        $j      = 2;
+                        break;
                     case 'after':
                         $insert = ' AFTER ' . $adapterPlatform->quoteIdentifier($coValue);
                         $j      = 2;
@@ -224,6 +230,13 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
                         $insert = ' COLLATE ' . $coValue;
                         $j      = 0;
                         break;
+                    case 'first':
+                        $insert = ' FIRST';
+                        $j      = 2;
+                        break;
+                    case 'after':
+                        $insert = ' AFTER ' . $adapterPlatform->quoteIdentifier($coValue);
+                        $j      = 2;
                 }
 
                 if ($insert) {

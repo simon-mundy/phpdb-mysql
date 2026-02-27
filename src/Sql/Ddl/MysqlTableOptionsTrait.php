@@ -47,6 +47,8 @@ trait MysqlTableOptionsTrait
             'autoincrement' => 'AUTO_INCREMENT = ' . $value,
             'rowformat' => 'ROW_FORMAT = ' . strtoupper((string) $value),
             'keyblocksize' => 'KEY_BLOCK_SIZE = ' . $value,
+            'compression' => 'COMPRESSION = ' . $platform->quoteTrustedValue(strtoupper((string) $value)),
+            'encryption' => 'ENCRYPTION = ' . $platform->quoteTrustedValue(strtoupper((string) $value)),
             default => $this->formatDefaultTableOption($key, $value, $platform),
         };
     }

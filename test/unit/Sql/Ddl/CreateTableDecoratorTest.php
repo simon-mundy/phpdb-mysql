@@ -6,10 +6,22 @@ namespace PhpDbTest\Mysql\Sql\Ddl;
 
 use PhpDb\Adapter\Driver\DriverInterface;
 use PhpDb\Mysql\AdapterPlatform;
+use PhpDb\Mysql\Sql\Ddl\Column\Enum;
+use PhpDb\Mysql\Sql\Ddl\Column\LongText;
+use PhpDb\Mysql\Sql\Ddl\Column\MediumInteger;
+use PhpDb\Mysql\Sql\Ddl\Column\Point;
+use PhpDb\Mysql\Sql\Ddl\Column\TinyInteger;
 use PhpDb\Mysql\Sql\Ddl\CreateTableDecorator;
+use PhpDb\Mysql\Sql\Ddl\Index\FulltextIndex;
+use PhpDb\Mysql\Sql\Ddl\Index\SpatialIndex;
 use PhpDb\Sql\Ddl\Column\Column;
+use PhpDb\Sql\Ddl\Column\Varchar;
+use PhpDb\Sql\Ddl\Constraint\Check;
+use PhpDb\Sql\Ddl\Constraint\ForeignKey;
 use PhpDb\Sql\Ddl\Constraint\PrimaryKey;
+use PhpDb\Sql\Ddl\Constraint\UniqueKey;
 use PhpDb\Sql\Ddl\CreateTable;
+use PhpDb\Sql\Ddl\Index\Index;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -319,5 +331,192 @@ final class CreateTableDecoratorTest extends TestCase
         self::assertStringContainsString('PRIMARY KEY', $sql);
         self::assertStringContainsString('ENGINE = InnoDB', $sql);
         self::assertStringContainsString('DEFAULT CHARACTER SET = utf8mb4', $sql);
+    }
+
+    public function testTableOptionCompression(): void
+    {
+        $ct = new CreateTable('foo');
+        $ct->addColumn(new Column('id'));
+        $ct->setOption('compression', 'zlib');
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('COMPRESSION = ', $sql);
+        self::assertStringContainsString('ZLIB', $sql);
+    }
+
+    public function testTableOptionEncryption(): void
+    {
+        $ct = new CreateTable('foo');
+        $ct->addColumn(new Column('id'));
+        $ct->setOption('encryption', 'y');
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('ENCRYPTION = ', $sql);
+        self::assertStringContainsString('Y', $sql);
+    }
+
+    public function testForeignKeyConstraint(): void
+    {
+        $ct = new CreateTable('orders');
+        $ct->addColumn(new Column('id'));
+        $ct->addColumn(new Column('user_id'));
+        $ct->addConstraint(new ForeignKey(
+            'fk_user',
+            'user_id',
+            'users',
+            'id',
+            'CASCADE',
+            'SET NULL'
+        ));
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('FOREIGN KEY', $sql);
+        self::assertStringContainsString('REFERENCES', $sql);
+        self::assertStringContainsString('ON DELETE CASCADE', $sql);
+        self::assertStringContainsString('ON UPDATE SET NULL', $sql);
+    }
+
+    public function testCheckConstraint(): void
+    {
+        $ct = new CreateTable('products');
+        $ct->addColumn(new Column('price'));
+        $ct->addConstraint(new Check('price > 0', 'chk_price'));
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('CHECK', $sql);
+        self::assertStringContainsString('price > 0', $sql);
+    }
+
+    public function testUniqueKeyConstraint(): void
+    {
+        $ct = new CreateTable('users');
+        $ct->addColumn(new Column('email'));
+        $ct->addConstraint(new UniqueKey('email', 'uq_email'));
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('UNIQUE', $sql);
+    }
+
+    public function testTemporaryTable(): void
+    {
+        $ct = new CreateTable('tmp_data', true);
+        $ct->addColumn(new Column('id'));
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('CREATE TEMPORARY TABLE', $sql);
+    }
+
+    public function testTemporaryTableWithIfNotExists(): void
+    {
+        $ct = new CreateTable('tmp_data', true);
+        $ct->ifNotExists();
+        $ct->addColumn(new Column('id'));
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('CREATE TEMPORARY TABLE', $sql);
+        self::assertStringContainsString('IF NOT EXISTS', $sql);
+    }
+
+    public function testMysqlColumnTypesInCreateTable(): void
+    {
+        $ct = new CreateTable('mixed');
+        $ct->addColumn(new TinyInteger('status'));
+        $ct->addColumn(new MediumInteger('counter'));
+        $ct->addColumn(new LongText('body'));
+        $ct->addColumn(new Point('location'));
+        $ct->addColumn(new Enum('role', ['admin', 'user']));
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('TINYINT', $sql);
+        self::assertStringContainsString('MEDIUMINT', $sql);
+        self::assertStringContainsString('LONGTEXT', $sql);
+        self::assertStringContainsString('POINT', $sql);
+        self::assertStringContainsString("ENUM('admin','user')", $sql);
+    }
+
+    public function testFullTableWithAllFeatures(): void
+    {
+        $ct = new CreateTable('articles');
+
+        $id = new Column('id');
+        $id->setOption('unsigned', true);
+        $id->setOption('autoincrement', true);
+        $ct->addColumn($id);
+
+        $ct->addColumn(new Varchar('title', 255));
+
+        $body = new LongText('body');
+        $body->setOption('charset', 'utf8mb4');
+        $ct->addColumn($body);
+
+        $ct->addColumn(new Enum('status', ['draft', 'published']));
+
+        $ct->addConstraint(new PrimaryKey('id'));
+        $ct->addConstraint(new UniqueKey('title', 'uq_title'));
+        $ct->addConstraint(new FulltextIndex('body', 'ft_body'));
+        $ct->addConstraint(new Check('LENGTH(title) > 0', 'chk_title'));
+
+        $ct->setOption('engine', 'InnoDB');
+        $ct->setOption('charset', 'utf8mb4');
+        $ct->setOption('collate', 'utf8mb4_unicode_ci');
+        $ct->setOption('comment', 'Article storage');
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('AUTO_INCREMENT', $sql);
+        self::assertStringContainsString('UNSIGNED', $sql);
+        self::assertStringContainsString('VARCHAR', $sql);
+        self::assertStringContainsString('LONGTEXT', $sql);
+        self::assertStringContainsString('CHARACTER SET utf8mb4', $sql);
+        self::assertStringContainsString("ENUM('draft','published')", $sql);
+        self::assertStringContainsString('PRIMARY KEY', $sql);
+        self::assertStringContainsString('UNIQUE', $sql);
+        self::assertStringContainsString('FULLTEXT INDEX', $sql);
+        self::assertStringContainsString('CHECK', $sql);
+        self::assertStringContainsString('ENGINE = InnoDB', $sql);
+        self::assertStringContainsString('DEFAULT CHARACTER SET = utf8mb4', $sql);
+        self::assertStringContainsString('COLLATE = utf8mb4_unicode_ci', $sql);
+        self::assertStringContainsString('COMMENT = ', $sql);
+    }
+
+    public function testIndexInCreateTable(): void
+    {
+        $ct = new CreateTable('foo');
+        $ct->addColumn(new Column('name'));
+        $ct->addConstraint(new Index('name', 'idx_name'));
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('INDEX', $sql);
+    }
+
+    public function testSpatialIndexInCreateTable(): void
+    {
+        $ct = new CreateTable('geo');
+        $ct->addColumn(new Point('location'));
+        $ct->addConstraint(new SpatialIndex('location', 'sp_location'));
+
+        $decorator = $this->decorate($ct);
+        $sql       = $decorator->getSqlString($this->platform);
+
+        self::assertStringContainsString('SPATIAL INDEX', $sql);
     }
 }
