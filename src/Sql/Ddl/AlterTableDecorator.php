@@ -22,6 +22,8 @@ use function uksort;
 
 final class AlterTableDecorator extends AlterTable implements PlatformDecoratorInterface
 {
+    use MysqlTableOptionsTrait;
+
     protected SqlInterface|PreparableSqlInterface|null $subject;
 
     /** @var array{
@@ -34,6 +36,8 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
      *  columnformat: int,
      *  format: int,
      *  storage: int,
+     *  charset: int,
+     *  collation: int,
      *  after: int
      * } $columnOptionSortOrder
      */
@@ -47,7 +51,9 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
         'columnformat'  => 4,
         'format'        => 4,
         'storage'       => 5,
-        'after'         => 6,
+        'charset'       => 6,
+        'collation'     => 7,
+        'after'         => 8,
     ];
 
     public function setSubject(
@@ -134,6 +140,16 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
                         $insert = ' STORAGE ' . strtoupper($coValue);
                         $j      = 2;
                         break;
+                    case 'charset':
+                    case 'characterset':
+                        $insert = ' CHARACTER SET ' . $coValue;
+                        $j      = 0;
+                        break;
+                    case 'collation':
+                    case 'collate':
+                        $insert = ' COLLATE ' . $coValue;
+                        $j      = 0;
+                        break;
                     case 'after':
                         $insert = ' AFTER ' . $adapterPlatform->quoteIdentifier($coValue);
                         $j      = 2;
@@ -198,6 +214,16 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
                         $insert = ' STORAGE ' . strtoupper($coValue);
                         $j      = 2;
                         break;
+                    case 'charset':
+                    case 'characterset':
+                        $insert = ' CHARACTER SET ' . $coValue;
+                        $j      = 0;
+                        break;
+                    case 'collation':
+                    case 'collate':
+                        $insert = ' COLLATE ' . $coValue;
+                        $j      = 0;
+                        break;
                 }
 
                 if ($insert) {
@@ -216,6 +242,18 @@ final class AlterTableDecorator extends AlterTable implements PlatformDecoratorI
         }
 
         return [$sqls];
+    }
+
+    /**
+     * @return string[][]|null
+     */
+    protected function processTableOptions(?PlatformInterface $adapterPlatform = null): ?array
+    {
+        if (! $this->options) {
+            return null;
+        }
+
+        return [$this->buildMysqlTableOptions($adapterPlatform)];
     }
 
     /**

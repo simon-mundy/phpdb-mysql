@@ -11,6 +11,7 @@ use PhpDb\Sql\PreparableSqlInterface;
 use PhpDb\Sql\SqlInterface;
 
 use function count;
+use function implode;
 use function range;
 use function str_replace;
 use function strlen;
@@ -22,6 +23,8 @@ use function uksort;
 
 final class CreateTableDecorator extends CreateTable implements PlatformDecoratorInterface
 {
+    use MysqlTableOptionsTrait;
+
     protected SqlInterface|PreparableSqlInterface|null $subject;
 
     /** @var int[] */
@@ -35,6 +38,8 @@ final class CreateTableDecorator extends CreateTable implements PlatformDecorato
         'columnformat'  => 4,
         'format'        => 4,
         'storage'       => 5,
+        'charset'       => 6,
+        'collation'     => 7,
     ];
 
     public function setSubject(
@@ -132,6 +137,16 @@ final class CreateTableDecorator extends CreateTable implements PlatformDecorato
                         $insert = ' STORAGE ' . strtoupper($coValue);
                         $j      = 2;
                         break;
+                    case 'charset':
+                    case 'characterset':
+                        $insert = ' CHARACTER SET ' . $coValue;
+                        $j      = 0;
+                        break;
+                    case 'collation':
+                    case 'collate':
+                        $insert = ' COLLATE ' . $coValue;
+                        $j      = 0;
+                        break;
                 }
 
                 if ($insert) {
@@ -148,6 +163,18 @@ final class CreateTableDecorator extends CreateTable implements PlatformDecorato
         }
 
         return [$sqls];
+    }
+
+    /**
+     * @return string[]|null
+     */
+    protected function processTableOptions(?PlatformInterface $adapterPlatform = null): ?array
+    {
+        if (! $this->options) {
+            return null;
+        }
+
+        return [implode(' ', $this->buildMysqlTableOptions($adapterPlatform))];
     }
 
     /**
