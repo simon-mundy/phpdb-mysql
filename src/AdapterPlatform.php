@@ -9,7 +9,7 @@ use Override;
 use PDO;
 use PhpDb\Adapter\Driver\DriverInterface;
 use PhpDb\Adapter\Platform\AbstractPlatform;
-use PhpDb\Sql\Platform\PlatformDecoratorInterface;
+use PhpDb\Sql\Platform\AbstractSqlRenderer;
 
 use function implode;
 use function str_replace;
@@ -51,7 +51,7 @@ class AdapterPlatform extends AbstractPlatform
      * {@inheritDoc}
      */
     #[Override]
-    public function getSqlPlatformDecorator(): PlatformDecoratorInterface
+    public function getSqlPlatformDecorator(): AbstractSqlRenderer
     {
         return new Sql\Platform();
     }

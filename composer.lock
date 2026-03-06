@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9d2d01c20515ddf6f3b141bf12b661fc",
+    "content-hash": "df8ef901ab80a2612925dc1dfe485441",
     "packages": [
         {
             "name": "brick/varexporter",
@@ -259,16 +259,16 @@
         },
         {
             "name": "php-db/phpdb",
-            "version": "0.6.x-dev",
+            "version": "dev-sql-platform-refactor",
             "source": {
                 "type": "git",
-                "url": "https://github.com/php-db/phpdb.git",
-                "reference": "cb328d33d1290df05568793d519d2bac23faa34f"
+                "url": "https://github.com/simon-mundy/phpdb.git",
+                "reference": "31eb11ae960374a3b31cc950df9a385f743d33fc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-db/phpdb/zipball/cb328d33d1290df05568793d519d2bac23faa34f",
-                "reference": "cb328d33d1290df05568793d519d2bac23faa34f",
+                "url": "https://api.github.com/repos/simon-mundy/phpdb/zipball/31eb11ae960374a3b31cc950df9a385f743d33fc",
+                "reference": "31eb11ae960374a3b31cc950df9a385f743d33fc",
                 "shasum": ""
             },
             "require": {
@@ -294,7 +294,6 @@
                 "laminas/laminas-eventmanager": "Laminas\\EventManager component",
                 "laminas/laminas-hydrator": "(^5.0.0) Laminas\\Hydrator component for using HydratingResultSets"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "laminas": {
@@ -307,7 +306,48 @@
                     "CustomRule\\PHPUnit\\": "rector/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "PhpDbTest\\": "test/unit/",
+                    "PhpDbIntegrationTest\\": "test/integration/",
+                    "PhpDbBenchmark\\": "test/benchmark/"
+                }
+            },
+            "scripts": {
+                "check": [
+                    "@cs-check",
+                    "@sa",
+                    "@test",
+                    "@test-integration"
+                ],
+                "cs-check": [
+                    "phpcs"
+                ],
+                "cs-fix": [
+                    "phpcbf"
+                ],
+                "test": [
+                    "phpunit --colors=always --testsuite \"unit test\""
+                ],
+                "test-coverage": [
+                    "phpunit --colors=always --coverage-clover clover.xml"
+                ],
+                "test-integration": [
+                    "phpunit --colors=always --testsuite \"integration test\""
+                ],
+                "sa": [
+                    "vendor/bin/phpstan analyse --memory-limit=256M"
+                ],
+                "sa-gen-baseline": [
+                    "vendor/bin/phpstan analyse --memory-limit=256M --generate-baseline"
+                ],
+                "sa-verbose": [
+                    "vendor/bin/phpstan analyse --memory-limit=256M -vv"
+                ],
+                "upload-coverage": [
+                    "coveralls -v"
+                ]
+            },
             "license": [
                 "BSD-3-Clause"
             ],
@@ -324,7 +364,7 @@
                 "issues": "https://github.com/php-db/phpdb/issues",
                 "source": "https://github.com/php-db/phpdb"
             },
-            "time": "2026-02-25T10:50:24+00:00"
+            "time": "2026-03-04T14:33:18+00:00"
         },
         {
             "name": "psr/container",
@@ -2611,7 +2651,9 @@
     ],
     "aliases": [],
     "minimum-stability": "dev",
-    "stability-flags": {},
+    "stability-flags": {
+        "php-db/phpdb": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
@@ -2624,5 +2666,5 @@
     "platform-overrides": {
         "php": "8.2.99"
     },
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.6.0"
 }

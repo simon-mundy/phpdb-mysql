@@ -87,7 +87,7 @@ final class ResultTest extends TestCase
             ->willReturn(4);
 
         $result = new Result();
-        $result->initialize($mock, null, null);
+        $result->initialize($mock, null, $mock->rowCount(...));
 
         self::assertSame(4, $result->count());
     }

@@ -4,73 +4,23 @@ declare(strict_types=1);
 
 namespace PhpDb\Mysql\Sql;
 
-use Override;
-use PhpDb\Adapter\Driver\DriverInterface;
-use PhpDb\Adapter\ParameterContainer;
-use PhpDb\Adapter\Platform\PlatformInterface;
-use PhpDb\Sql\Platform\PlatformDecoratorInterface;
-use PhpDb\Sql\PreparableSqlInterface;
+use PhpDb\Sql\Platform\AbstractSqlRenderer;
+use PhpDb\Sql\Platform\SqlDecoratorInterface;
 use PhpDb\Sql\Select;
-use PhpDb\Sql\SqlInterface;
 
-final class SelectDecorator extends Select implements PlatformDecoratorInterface
+use function assert;
+
+final class SelectDecorator implements SqlDecoratorInterface
 {
-    protected SqlInterface|PreparableSqlInterface|null $subject;
-
-    #[Override]
-    public function setSubject(
-        SqlInterface|PreparableSqlInterface|null $subject
-    ): PlatformDecoratorInterface {
-        $this->subject = $subject;
-        return $this;
-    }
-
-    #[Override]
-    protected function localizeVariables(): void
+    public function prepare(object $subject, AbstractSqlRenderer $renderer): void
     {
-        parent::localizeVariables();
-        if ($this->limit === null && $this->offset !== null) {
-            $this->specifications[self::LIMIT] = 'LIMIT 18446744073709551615';
-        }
-    }
+        assert($subject instanceof Select);
 
-    /** @return string[]|null */
-    #[Override]
-    protected function processLimit(
-        PlatformInterface $platform,
-        ?DriverInterface $driver = null,
-        ?ParameterContainer $parameterContainer = null
-    ): ?array {
-        if ($this->limit === null && $this->offset !== null) {
-            return [''];
+        if (
+            $subject->getRawState(Select::LIMIT) === null
+            && $subject->getRawState(Select::OFFSET) !== null
+        ) {
+            $subject->limit('18446744073709551615');
         }
-        if ($this->limit === null) {
-            return null;
-        }
-        if ($parameterContainer) {
-            $paramPrefix = $this->processInfo['paramPrefix'];
-            $parameterContainer->offsetSet($paramPrefix . 'limit', $this->limit, ParameterContainer::TYPE_INTEGER);
-            return [$driver->formatParameterName($paramPrefix . 'limit')];
-        }
-
-        return [$this->limit];
-    }
-
-    #[Override]
-    protected function processOffset(
-        PlatformInterface $platform,
-        ?DriverInterface $driver = null,
-        ?ParameterContainer $parameterContainer = null
-    ): ?array {
-        if ($this->offset === null) {
-            return null;
-        }
-        if ($parameterContainer) {
-            $paramPrefix = $this->processInfo['paramPrefix'];
-            $parameterContainer->offsetSet($paramPrefix . 'offset', $this->offset, ParameterContainer::TYPE_INTEGER);
-            return [$driver->formatParameterName($paramPrefix . 'offset')];
-        }
-
-        return [$this->offset];
     }
 }

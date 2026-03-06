@@ -24,11 +24,9 @@ class Driver extends AbstractPdo
         /** @var ResultInterface&Result $result */
         $result = clone $this->resultPrototype;
 
-        $rowCount = null;
-
         $lastGeneratedValue = $this->getLastGeneratedValue();
 
-        $result->initialize($resource, $lastGeneratedValue, $rowCount);
+        $result->initialize($resource, $lastGeneratedValue, $resource->rowCount(...));
         return $result;
     }
 }

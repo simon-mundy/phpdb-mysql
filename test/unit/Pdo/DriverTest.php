@@ -98,7 +98,7 @@ final class DriverTest extends TestCase
         self::assertInstanceOf(Result::class, $resultPrototype);
     }
 
-    public function testCreateResultPassesNullRowCount(): void
+    public function testCreateResultPassesRowCountClosure(): void
     {
         $pdoStatement = $this->getMockBuilder(PDOStatement::class)->getMock();
         $pdoStatement->expects($this->once())
